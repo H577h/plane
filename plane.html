@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>飞机大战小游戏</title>
+    <style>
+        * {margin:0;padding:0;box-sizing:border-box;}
+        body {background:#111;color:#fff;font-family:system-ui;display:flex;flex-direction:column;align-items:center;padding:10px;}
+        #gameBox {
+            width:320px;height:560px;
+            background:#000 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Ccircle cx='20' cy='20' r='1' fill='%23fff'/%3E%3Ccircle cx='60' cy='70' r='1' fill='%23fff'/%3E%3C/svg%3E");
+            position:relative;overflow:hidden;border:2px solid #444;
+        }
+        .plane {
+            width:40px;height:40px;
+            background:#42a5f5;clip-path:polygon(50% 0,100% 100%,50% 70%,0 100%);
+            position:absolute;
+        }
+        .enemy {
+            width:36px;height:36px;
+            background:#ef5350;clip-path:polygon(50% 100%,100% 0,50% 30%,0 0);
+            position:absolute;
+        }
+        .bullet {
+            width:4px;height:12px;background:#ffeb3b;
+            position:absolute;border-radius:2px;
+        }
+        #score {font-size:20px;margin-bottom:8px;}
+        #tip {font-size:14px;color:#aaa;margin-bottom:8px;}
+    </style>
+</head>
+<body>
+    <div id="score">得分：0</div>
+    <div id="tip">方向键移动 | 空格键发射子弹</div>
+    <div id="gameBox">
+        <div class="plane" id="myPlane"></div>
+    </div>
+
+<script>
+const gameBox = document.getElementById('gameBox');
+const myPlane = document.getElementById('myPlane');
+const scoreDom = document.getElementById('score');
+
+const W = 320, H = 560;
+const planeW = 40, planeH = 40;
+let x = W/2 - planeW/2;
+let y = H - planeH - 20;
+let speed = 6;
+let score = 0;
+let bullets = [];
+let enemies = [];
+let keyMap = {};
+
+myPlane.style.left = x + 'px';
+myPlane.style.top = y + 'px';
+
+// 键盘监听
+document.addEventListener('keydown', e=>{
+    keyMap[e.code] = true;
+    if(e.code === 'Space'){
+        e.preventDefault();
+        shoot();
+    }
+})
+document.addEventListener('keyup', e=>{
+    keyMap[e.code] = false;
+})
+
+// 发射子弹
+function shoot(){
+    const b = document.createElement('div');
+    b.className = 'bullet';
+    b.style.left = (x + planeW/2 - 2) + 'px';
+    b.style.top = y + 'px';
+    gameBox.appendChild(b);
+    bullets.push(b);
+}
+
+// 创建敌机
+function createEnemy(){
+    const e = document.createElement('div');
+    e.className = 'enemy';
+    const ex = Math.random()*(W - 36);
+    e.style.left = ex + 'px';
+    e.style.top = '-40px';
+    gameBox.appendChild(e);
+    enemies.push(e);
+}
+
+// 碰撞检测
+function isHit(a,b,aw,bw,ah,bh){
+    const aL = parseInt(a.style.left), aT = parseInt(a.style.top);
+    const bL = parseInt(b.style.left), bT = parseInt(b.style.top);
+    return !(aL + aw < bL || bL + bw < aL || aT + ah < bT || bT + bh < aT);
+}
+
+// 游戏主循环
+function loop(){
+    // 玩家移动
+    if(keyMap['ArrowLeft'] && x>0) x -= speed;
+    if(keyMap['ArrowRight'] && x < W-planeW) x += speed;
+    if(keyMap['ArrowUp'] && y>0) y -= speed;
+    if(keyMap['ArrowDown'] && y < H-planeH) y += speed;
+    myPlane.style.left = x + 'px';
+    myPlane.style.top = y + 'px';
+
+    // 子弹移动
+    for(let i=bullets.length-1;i>=0;i--){
+        const b = bullets[i];
+        let by = parseInt(b.style.top);
+        by -= 8;
+        b.style.top = by+'px';
+        if(by < -12){
+            b.remove();
+            bullets.splice(i,1);
+        }
+    }
+
+    // 敌机移动 + 碰撞
+    for(let i=enemies.length-1;i>=0;i--){
+        const e = enemies[i];
+        let ey = parseInt(e.style.top);
+        ey += 4;
+        e.style.top = ey+'px';
+
+        // 子弹打中敌机
+        for(let j=bullets.length-1;j>=0;j--){
+            const b = bullets[j];
+            if(isHit(b,e,4,36,12,36)){
+                e.remove(); enemies.splice(i,1);
+                b.remove(); bullets.splice(j,1);
+                score +=10;
+                scoreDom.innerText = "得分："+score;
+                break;
+            }
+        }
+        // 敌机飞出屏幕
+        if(ey > H){
+            e.remove();
+            enemies.splice(i,1);
+        }
+        // 敌机撞到玩家
+        if(isHit(myPlane,e,40,36,40,36)){
+            alert("游戏结束！得分："+score);
+            location.reload();
+        }
+    }
+    requestAnimationFrame(loop);
+}
+
+// 定时生成敌机
+setInterval(createEnemy, 1200);
+loop();
+</script>
+</body>
+</html>
